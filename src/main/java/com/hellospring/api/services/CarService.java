@@ -1,10 +1,12 @@
 package com.hellospring.api.services;
 
 import java.io.FileNotFoundException;
-import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties.Pageable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.hellospring.api.dto.CarDTO;
@@ -21,20 +23,26 @@ public class CarService {
     return carRepository.save(data);
   }
 
-  public List<Car> findAll() {
-    return carRepository.findAll();
+  public Page<Car> findAll(Pageable pageable) {
+    int page = Integer.parseInt(pageable.getPageParameter());
+    int size = Integer.parseInt(pageable.getSizeParameter());
+    
+    PageRequest pageRequest = PageRequest.of(page, size);
+
+    return new PageImpl<>(carRepository.findAll(), pageRequest, size);
   }
 
-  public Optional<Car> findCarById(Long id) throws FileNotFoundException {
-    Optional<Car> car = carRepository.findById(id);
-    if (car.isEmpty())
-      throw new FileNotFoundException("Veículo não encontrado");
-    else
-      return car;
+  public Car findCarById(Long id) throws FileNotFoundException {
+    return carRepository.findById(id)
+        .map(car -> car).orElse(null);
+    // if (!car.isEmpty())
+    //   return car;
+    // else
+    //   throw new FileNotFoundException("Veículo não encontrado");
   }
 
-  public void update(Long id, CarDTO data) throws FileNotFoundException {
-    if (!carRepository.findById(id).isEmpty())
+  public CarDTO update(Long id, CarDTO data) throws FileNotFoundException {
+    if (!carRepository.findById(id).isEmpty()) {
       carRepository.findById(id).map(car -> {
         car.setAnoModelo(data.anoModelo());
         car.setDataFabricacao(data.dataFabricacao());
@@ -43,8 +51,9 @@ public class CarService {
         car.setValor(data.valor());
         return carRepository.save(car);
       });
-      else 
-        throw new FileNotFoundException("Veículo não existente");
+      return data;
+    } else
+      throw new FileNotFoundException("Veículo não existente");
   }
 
   public boolean deleteById(Long id) throws FileNotFoundException {

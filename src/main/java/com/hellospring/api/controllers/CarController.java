@@ -1,10 +1,14 @@
 package com.hellospring.api.controllers;
 
-import java.util.List;
-import java.util.Optional;
+import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties.Pageable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/")
 public class CarController {
 
@@ -30,48 +35,43 @@ public class CarController {
   private CarService carService;
 
   @PostMapping
-  @ResponseStatus(value = HttpStatus.CREATED)
+  @ResponseStatus(code = HttpStatus.CREATED)
   public Car create(@RequestBody @Valid CarDTO req) {
     return carService.create(new Car(req));
   }
 
   @GetMapping
-  public List<Car> getCars() {
-    return carService.findAll();
+  public Page<Car> getCars(@PageableDefault(page = 0, size = 10) Pageable pageable) {
+    return carService.findAll(pageable);
   }
 
   @GetMapping("{id}")
-  public Optional<Car> getCarById(@PathVariable Long id, HttpServletResponse res) {
+  public ResponseEntity<Car> getCarById(@PathVariable Long id) throws IOException {
     try {
-      return carService.findCarById(id);
+      Car car = carService.findCarById(id);
+      return ResponseEntity.ok().body(car);
     } catch (Exception e) {
-      res.setStatus(HttpStatus.NOT_FOUND.value());
-      return null;
+      return ResponseEntity.notFound().build();
     }
   }
 
   @PutMapping("{id}")
-  public String update(@PathVariable Long id, @RequestBody @Valid CarDTO req, HttpServletResponse res) {
+  public ResponseEntity<String> update(@PathVariable Long id, @RequestBody @Valid CarDTO req) {
     try {
       carService.update(id, req);
-      res.setStatus(HttpStatus.OK.value());
-      return "Veículo atualizado";
+      return ResponseEntity.ok().body("Veículo atualizado");
     } catch (Exception e) {
-      res.setStatus(HttpStatus.NOT_FOUND.value());
-      return e.getMessage();
+      return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
     }
   }
 
   @DeleteMapping("{id}")
-  public String delete(@PathVariable Long id, HttpServletResponse res) {
+  public ResponseEntity<String> delete(@PathVariable Long id, HttpServletResponse res) {
     try {
       carService.deleteById(id);
-      res.setStatus(HttpStatus.NO_CONTENT.value());
-      return "Veículo apagado";
-    } 
-    catch (Exception e) {
-      res.setStatus(HttpStatus.NOT_FOUND.value());
-      return e.getMessage();
+      return ResponseEntity.noContent().build();
+    } catch (Exception e) {
+      return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
     }
   }
 }
